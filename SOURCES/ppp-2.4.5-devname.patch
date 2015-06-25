@@ -1,0 +1,122 @@
+diff -up ppp-2.4.5/pppd/main.c.devname ppp-2.4.5/pppd/main.c
+--- ppp-2.4.5/pppd/main.c.devname	2009-11-16 18:26:07.000000000 -0400
++++ ppp-2.4.5/pppd/main.c	2012-03-21 05:34:48.918865531 -0400
+@@ -124,7 +124,7 @@
+ static const char rcsid[] = RCSID;
+ 
+ /* interface vars */
+-char ifname[32];		/* Interface name */
++char ifname[IFNAMSIZ];		/* Interface name */
+ int ifunit;			/* Interface unit number */
+ 
+ struct channel *the_channel;
+@@ -737,8 +737,18 @@ void
+ set_ifunit(iskey)
+     int iskey;
+ {
+-    info("Using interface %s%d", PPP_DRV_NAME, ifunit);
+     slprintf(ifname, sizeof(ifname), "%s%d", PPP_DRV_NAME, ifunit);
++    if (devname[0]) {
++	char req_devname[IFNAMSIZ];
++
++	slprintf(req_devname, sizeof(req_devname), "%s%d", devname, ifunit);
++	if(sys_change_ifname(ifname, req_devname)) {
++	    slprintf(ifname, sizeof(ifname), "%s", req_devname);
++	    info("Changing interface to %s", ifname);
++	}
++    }
++    else
++	info("Using interface %s%d", PPP_DRV_NAME, ifunit);
+     script_setenv("IFNAME", ifname, iskey);
+     if (iskey) {
+ 	create_pidfile(getpid());	/* write pid to file */
+diff -up ppp-2.4.5/pppd/options.c.devname ppp-2.4.5/pppd/options.c
+--- ppp-2.4.5/pppd/options.c.devname	2009-11-16 18:26:07.000000000 -0400
++++ ppp-2.4.5/pppd/options.c	2012-03-21 05:34:48.920864414 -0400
+@@ -113,6 +113,7 @@ char	linkname[MAXPATHLEN];	/* logical na
+ bool	tune_kernel;		/* may alter kernel settings */
+ int	connect_delay = 1000;	/* wait this many ms after connect script */
+ int	req_unit = -1;		/* requested interface unit */
++char    devname[IFNAMSIZ - 4];  /* interface name for device */
+ bool	multilink = 0;		/* Enable multilink operation */
+ char	*bundle_name = NULL;	/* bundle name for multilink */
+ bool	dump_options;		/* print out option values */
+@@ -272,6 +273,10 @@ option_t general_options[] = {
+       "PPP interface unit number to use if possible",
+       OPT_PRIO | OPT_LLIMIT, 0, 0 },
+ 
++    { "devname", o_string, devname,
++      "Set interface name for device",
++      OPT_PRIO | OPT_PRIV | OPT_STATIC, NULL, IFNAMSIZ - 4 },
++
+     { "dump", o_bool, &dump_options,
+       "Print out option values after parsing all options", 1 },
+     { "dryrun", o_bool, &dryrun,
+diff -up ppp-2.4.5/pppd/pppd.h.devname ppp-2.4.5/pppd/pppd.h
+--- ppp-2.4.5/pppd/pppd.h.devname	2009-11-16 18:26:07.000000000 -0400
++++ ppp-2.4.5/pppd/pppd.h	2012-03-21 05:34:48.921868604 -0400
+@@ -55,6 +55,9 @@
+ #include <sys/types.h>		/* for u_int32_t, if defined */
+ #include <sys/time.h>		/* for struct timeval */
+ #include <net/ppp_defs.h>
++#ifndef IFNAMSIZ
++#include <net/if.h>             /* for NAMSIZE */
++#endif
+ #include "patchlevel.h"
+ 
+ #if defined(__STDC__)
+@@ -313,6 +316,7 @@ extern bool	tune_kernel;	/* May alter ke
+ extern int	connect_delay;	/* Time to delay after connect script */
+ extern int	max_data_rate;	/* max bytes/sec through charshunt */
+ extern int	req_unit;	/* interface unit number to use */
++extern char     devname[IFNAMSIZ - 4]; /* interface name for device */
+ extern bool	multilink;	/* enable multilink operation */
+ extern bool	noendpoint;	/* don't send or accept endpt. discrim. */
+ extern char	*bundle_name;	/* bundle name for multilink */
+@@ -669,6 +673,7 @@ int  cipxfaddr __P((int));
+ #endif
+ int  get_if_hwaddr __P((u_char *addr, char *name));
+ char *get_first_ethernet __P((void));
++int sys_change_ifname __P((const char *, const char *));
+ 
+ /* Procedures exported from options.c */
+ int setipaddr __P((char *, char **, int)); /* Set local/remote ip addresses */
+diff -up ppp-2.4.5/pppd/sys-linux.c.devname ppp-2.4.5/pppd/sys-linux.c
+--- ppp-2.4.5/pppd/sys-linux.c.devname	2012-03-21 05:38:37.826244862 -0400
++++ ppp-2.4.5/pppd/sys-linux.c	2012-03-21 05:34:48.925114414 -0400
+@@ -1368,6 +1368,7 @@ get_ppp_stats(u, stats)
+     req.stats_ptr = (caddr_t) &req.stats;
+     strlcpy(req.ifr__name, ifname, sizeof(req.ifr__name));
+     if (ioctl(sock_fd, SIOCGPPPSTATS, &req) < 0) {
++	error(ifname);
+ 	error("Couldn't get PPP statistics: %m");
+ 	return 0;
+     }
+@@ -2891,3 +2892,27 @@ ether_to_eui64(eui64_t *p_eui64)
+     return 1;
+ }
+ #endif
++
++int
++sys_change_ifname(const char *old, const char *new)
++{
++    struct ifreq ifr;
++
++    SYSDEBUG ((LOG_DEBUG, "sys_change_ifname: %s -> %s\n", old, new));
++
++    memset (&ifr, '\0', sizeof (ifr));
++    strlcpy(ifr.ifr_name, old, sizeof (ifr.ifr_name));
++    strlcpy(ifr.ifr_newname, new, sizeof (ifr.ifr_newname));
++
++#ifndef SIOCSIFNAME
++#define SIOCSIFNAME 0x8923
++#endif
++    if (ioctl(sock_fd, SIOCSIFNAME, (caddr_t) &ifr) < 0) {
++       if (errno == EEXIST)
++           warn("Couldn't change name to %s as it is already in use", new);
++       else
++           error("Couldn't change name from %s to %s: %m", old, new);
++       return 0;
++    }
++    return 1;
++}

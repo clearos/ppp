@@ -38,6 +38,7 @@ Patch32: ppp-2.4.5-l2tp-multilink.patch
 Patch33: ppp-2.4.5-radius-config.patch
 Patch34: ppp-2.4.5-crypt.patch
 Patch35: ppp-2.4.5-hardened.patch
+Patch100: ppp-2.4.5-devname.patch
 
 BuildRequires: pam-devel, libpcap-devel, openssl-devel, systemd
 Requires: glibc >= 2.0.6, /etc/pam.d/system-auth, libpcap >= 14:0.8.3-6, systemd
@@ -91,6 +92,7 @@ This package contains the header files for building plugins for ppp.
 %patch33 -p1 -b .radius
 %patch34 -p1 -b .crypt
 %patch35 -p1 -b .hardened
+%patch100 -p1 -b .devname
 
 rm -f scripts/*.local
 rm -f scripts/*.change_resolv_conf
@@ -171,6 +173,9 @@ mkdir -p %{_localstatedir}/lock/ppp 2>&1 >/dev/null || :
 %doc PLUGINS
 
 %changelog
+* Wed Jun 18 2014 ClearFoundation <developer@clearfoundation.com> 2.4.5-33.clear
+- add device name support
+
 * Fri Jan 24 2014 Daniel Mach <dmach@redhat.com> - 2.4.5-33
 - Mass rebuild 2014-01-24
 
