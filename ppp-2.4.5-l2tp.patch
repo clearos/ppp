@@ -1,0 +1,12 @@
+--- ppp-2.4.5/pppd/plugins/pppol2tp/Makefile.linux	2012-05-14 16:51:27.435888844 +0200
++++ ppp-2.4.5/pppd/plugins/pppol2tp/Makefile.linux	2012-05-14 16:51:41.372806688 +0200
+@@ -6,8 +6,8 @@ INSTALL	= install
+ 
+ #***********************************************************************
+ 
+-DESTDIR = @DESTDIR@
+-LIBDIR = $(DESTDIR)/lib/pppd/$(VERSION)
++DESTDIR = $(INSTROOT)@DESTDIR@
++LIBDIR = $(DESTDIR)/lib/$(shell gcc -print-multi-os-directory 2> /dev/null)/pppd/$(VERSION)
+ 
+ VERSION = $(shell awk -F '"' '/VERSION/ { print $$2; }' ../../patchlevel.h)

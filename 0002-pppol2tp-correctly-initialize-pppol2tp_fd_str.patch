@@ -1,0 +1,28 @@
+From 8b1472c18097545e5a1cce8c7830a390f7b499ee Mon Sep 17 00:00:00 2001
+From: Michal Sekletar <msekleta@redhat.com>
+Date: Tue, 3 Mar 2015 13:18:23 +0100
+Subject: [PATCH 2/2] pppol2tp: correctly initialize pppol2tp_fd_str
+
+Resolves: #1197792
+---
+ pppd/plugins/pppol2tp/pppol2tp.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/pppd/plugins/pppol2tp/pppol2tp.c b/pppd/plugins/pppol2tp/pppol2tp.c
+index 0e28606..1ecff8c 100644
+--- a/pppd/plugins/pppol2tp/pppol2tp.c
++++ b/pppd/plugins/pppol2tp/pppol2tp.c
+@@ -148,6 +148,10 @@ static int setdevname_pppol2tp(char **argv)
+ 		fatal("PPPoL2TP kernel driver not installed");
+ 	}
+ 
++        pppol2tp_fd_str = strdup(argv[0]);
++        if (!pppol2tp_fd_str)
++                novm("PPPoL2TP FD");
++
+ 	/* Setup option defaults. Compression options are disabled! */
+ 
+ 	modem = 0;
+-- 
+1.8.3.1
+
