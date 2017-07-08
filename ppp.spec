@@ -28,6 +28,7 @@ Patch25: ppp-2.4.5-radius-config.patch
 Patch26: ppp-2.4.5-l2tp.patch
 Patch27: 0001-pppd-pass-arg-to-printer-callback.patch
 Patch28: 0002-pppol2tp-correctly-initialize-pppol2tp_fd_str.patch
+Patch100: ppp-2.4.5-devname.patch
 
 BuildRoot: %{_tmppath}/%{name}-root
 BuildRequires: pam-devel, libpcap-devel
@@ -71,6 +72,7 @@ This package contains the header files for building plugins for ppp.
 %patch26 -p1 -b .l2tp
 %patch27 -p1
 %patch28 -p1
+%patch100 -p1 -b .devname
 
 rm -f scripts/*.local
 rm -f scripts/*.change_resolv_conf
@@ -136,6 +138,9 @@ rm -rf $RPM_BUILD_ROOT
 %doc PLUGINS
 
 %changelog
+* Mon Aug 10 2015 ClearFoundation <developer@clearfoundation.com> 2.4.5-10.clear
+* Added device name support
+
 * Tue Mar  3 2015 Michal Sekletar <msekleta@redhat.com> - 2.4.5-10
 - apply l2tp patch
 
